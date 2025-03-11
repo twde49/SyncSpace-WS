@@ -62,6 +62,14 @@ app.post('/webhook/update-conversations',(req,res)=>{
     res.status(200).send('webhook received');
 })
 
+app.post('/webhook/send-notification',(req,res)=>{
+    const normalizedNotification = req.body.notification;
+    const userEmail = req.body.user_email;
+  console.log('body',req.body.notification);
+
+    io.emit('getNotification',normalizedNotification,userEmail);
+    res.status(200).send('webhook received');
+})
 
 const PORT = 6969;
 server.listen(PORT, () => {
