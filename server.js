@@ -97,14 +97,6 @@ app.post('/webhook/update-messages', (req, res) => {
     res.status(200).send('Webhook received');
 });
 
-app.post('/webhook/update-conversations',(req,res)=>{
-    const updatedConversations = req.body.conversations;
-
-    io.emit('updatedConversations',updatedConversations);
-
-    res.status(200).send('webhook received');
-})
-
 app.post('/webhook/send-notification',(req,res)=>{
     const normalizedNotification = req.body.notification;
     const userEmail = req.body.user_email;
@@ -112,6 +104,18 @@ app.post('/webhook/send-notification',(req,res)=>{
     io.emit('getNotification',normalizedNotification,userEmail);
     res.status(200).send('webhook received');
 })
+
+app.post('/webhook/refreshCalendar', (req, res) => {
+    console.log('refreshingCalendar');
+    io.emit('refreshCalendar');
+    res.status(200).send('Webhook received');
+});
+
+app.post('/webhook/refreshConversations', (req, res) => {
+    console.log('refreshingConversations');
+    io.emit('refreshConversations');
+    res.status(200).send('Webhook received');
+});
 
 const PORT = 6969;
 server.listen(PORT, () => {
