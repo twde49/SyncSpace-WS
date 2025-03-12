@@ -1,9 +1,8 @@
-
 const express = require('express');
 const http = require('node:http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const {get} = require("axios");
+const {get, put} = require("axios");
 
 const app = express();
 const server = http.createServer(app);
@@ -22,8 +21,54 @@ app.use(express.json());
 
 app.use(express.static('public'));
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     console.log('New client connected');
+    socket.emit('checkUser', { id: socket.id });
+    
+    socket.on('userOnline', async (userEmail,jwtToken) => {
+        try{
+          console.log('trying to set online');
+          const response = await put(`https://localhost:8000/api/user/setOnline/${userEmail}`, 
+              { email: userEmail },
+              { 
+                  headers: {
+                      'Authorization': `Bearer ${jwtToken}`
+                  }
+              }
+          );
+          if(response.status === 200){
+            console.log('User set online successfully');
+            console.log('emmiting refresh')
+            io.emit('refreshConversations')
+          }else{
+            console.error('Failed to set user online');
+          }
+        }catch(error){
+            console.error(error);
+        }
+    });
+
+    socket.on('userOffline', async (userEmail,jwtToken) => {
+        try{
+          console.log('trying to set offline');
+          const response = await put(`https://localhost:8000/api/user/setOffline/${userEmail}`, 
+              { email: userEmail },
+              { 
+                  headers: {
+                      'Authorization': `Bearer ${jwtToken}`
+                  }
+              }
+          );
+          if(response.status === 200){
+            console.log('User set offline successfully');
+            io.emit('refreshConversations')
+          }else{
+            console.error('Failed to set user offline');
+          }
+        }catch(error){
+            console.error(error);
+        }
+    });
 
     socket.on('message', (msg) => {
         console.log(`Message received: ${msg}`);
@@ -48,7 +93,6 @@ app.post('/webhook/update-messages', (req, res) => {
     const updatedMessages = req.body.messages;
 
     io.emit('updatedMessages', updatedMessages);
-    console.log('messages updated via webhook:', updatedMessages);
 
     res.status(200).send('Webhook received');
 });
@@ -57,7 +101,6 @@ app.post('/webhook/update-conversations',(req,res)=>{
     const updatedConversations = req.body.conversations;
 
     io.emit('updatedConversations',updatedConversations);
-    console.log('conversations updated via webhook:', updatedConversations)
 
     res.status(200).send('webhook received');
 })
@@ -65,7 +108,6 @@ app.post('/webhook/update-conversations',(req,res)=>{
 app.post('/webhook/send-notification',(req,res)=>{
     const normalizedNotification = req.body.notification;
     const userEmail = req.body.user_email;
-  console.log('body',req.body.notification);
 
     io.emit('getNotification',normalizedNotification,userEmail);
     res.status(200).send('webhook received');
