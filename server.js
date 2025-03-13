@@ -22,8 +22,6 @@ app.use(express.json());
 app.use(express.static('public'));
 
 io.on('connection', async (socket) => {
-    console.log('New client connected');
-    socket.emit('checkUser', { id: socket.id });
     
     socket.on('userOnline', async (userEmail,jwtToken) => {
         try{
@@ -37,8 +35,6 @@ io.on('connection', async (socket) => {
               }
           );
           if(response.status === 200){
-            console.log('User set online successfully');
-            console.log('emmiting refresh')
             io.emit('refreshConversations')
           }else{
             console.error('Failed to set user online');
@@ -50,7 +46,6 @@ io.on('connection', async (socket) => {
 
     socket.on('userOffline', async (userEmail,jwtToken) => {
         try{
-          console.log('trying to set offline');
           const response = await put(`https://localhost:8000/api/user/setOffline/${userEmail}`, 
               { email: userEmail },
               { 
@@ -60,7 +55,6 @@ io.on('connection', async (socket) => {
               }
           );
           if(response.status === 200){
-            console.log('User set offline successfully');
             io.emit('refreshConversations')
           }else{
             console.error('Failed to set user offline');
@@ -71,7 +65,6 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('message', (msg) => {
-        console.log(`Message received: ${msg}`);
         io.emit('message', msg);
     });
 
@@ -91,8 +84,20 @@ app.get('/api/symfony-data', async (req, res) => {
 
 app.post('/webhook/update-messages', (req, res) => {
     const updatedMessages = req.body.messages;
+    const conversationId = req.body.conversationId;
 
-    io.emit('updatedMessages', updatedMessages);
+    console.log(req.body);
+    io.emit('updatedMessages', updatedMessages, conversationId);
+
+    res.status(200).send('Webhook received');
+});
+
+app.post('/webhook/newMessage', (req, res) => {
+    const updatedMessage = req.body.message;
+    const conversationId = req.body.conversationId;
+
+    console.log(req.body);
+    io.emit('newMessage', updatedMessage, conversationId);
 
     res.status(200).send('Webhook received');
 });
@@ -106,13 +111,11 @@ app.post('/webhook/send-notification',(req,res)=>{
 })
 
 app.post('/webhook/refreshCalendar', (req, res) => {
-    console.log('refreshingCalendar');
     io.emit('refreshCalendar');
     res.status(200).send('Webhook received');
 });
 
 app.post('/webhook/refreshConversations', (req, res) => {
-    console.log('refreshingConversations');
     io.emit('refreshConversations');
     res.status(200).send('Webhook received');
 });
